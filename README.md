@@ -122,10 +122,6 @@ level but doesn't right now, read from the game's current data (so learnset
 mods are respected). Pick one and the game's normal "forget a move?" screen
 takes over. On Gen 3 it opens the game's own Move Relearner.
 
-If RENAME or RELEARN can't do its job, it says why on screen instead of doing
-nothing. When the party menu is full, CANCEL is dropped first (B still backs
-out) so these rows always fit.
-
 **Rematch.** Talk to a beaten trainer and they ask *"Would you like a
 rematch?"*. NO gives their usual line; YES starts the battle.
 
@@ -174,15 +170,13 @@ and the field itself are drawn as normal. If you also use
   number of slots. Adding slots would break Gen 3 saves.
 - **Gen 1/2 running** is 1.78×, not a round number: the game moves in whole
   frames per step, and a 9-frame step is the closest it gets to 1.7×.
-- **Overlapping mods:** if you also run HoldToScroll, a centred-camera mod,
-  Trainers Let You Choose Lead Pokemon, Gen3-Full-Height-Menus or qol_toggles,
-  turn the matching option off in one of them, or the effect doubles.
 - **Translation mods:** DECAPITALIZATION's word lists are English, so in a
   translated game it only fixes names that are still in capitals.
 - Each feature switches itself off and logs a warning if the part of the game
   it relies on is missing, rather than crashing.
 - If anything looks wrong, turn that option off. The normal game returns
   straight away.
+- The QoL toggles can be overridden by other UI mods without issue, like bag count in a shop being on but another    mod might change how the shop works entirely.  
 
 ## Credits
 
