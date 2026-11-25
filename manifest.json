@@ -1,0 +1,19 @@
+{
+  "id": "qol_comp",
+  "name": "QoL Comp",
+  "version": "1.4",
+  "api": 2,
+  "entry": "main.lua",
+  "profile": "content",
+  "category": "QOL",
+  "games": ["gen1", "gen2", "gen3"],
+  "game_version": "0.0.0-dev || >=0.1.69 <3.0.0",
+  "priority": 60,
+  "dependencies": [],
+  "optional_dependencies": [],
+  "conflicts": [],
+  "permissions": ["engine_internals"],
+  "affects_link": false,
+  "description": "Quality-of-life toggles for Gen 1, 2 and 3, every one starting at the normal game. Hold the d-pad to scroll menus, run with B, a quicker Pokémon Center, TMs that aren't used up, rename and relearn moves from the party menu, field moves without teaching them (only where they'd work), pick who leads a battle, rematch beaten trainers, normal-case text, a hidden-item twinkle, a muteable low-HP alarm, a centred Game Boy camera and full-screen GBA menus. Plus a START menu editor that also handles other mods' rows, and small always-on fixes: 999-item stacks, the owned count in shops and SELECT to swap party members. Options are reachable from the game's own OPTIONS screen as well as the Mod Manager.",
+  "github": "Theeohn/QoL-Comp"
+}

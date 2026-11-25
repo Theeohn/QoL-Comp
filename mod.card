@@ -1,0 +1,52 @@
+-- Sharing metadata.  Read by tooling and the manager detail pane; never by
+-- the loader's merge.
+return {
+  summary = "Quality-of-life toggles for all 11 games, a START menu editor and small always-on fixes.",
+  author = "Theeohn",
+  contact = "",
+  tags = { "quality-of-life", "qol", "menus", "battle", "overworld", "compilation" },
+  differences = {
+    changed = {
+      "every toggle lives in this mod's MOD OPTIONS list (nothing is added to the START menu): EDIT START MENU on top, then the toggles A-Z, each starting at the normal game",
+      "a QOL COMP row in every game's own OPTIONS screen, straight to those options",
+      "SHOP BAG COUNT (always on): the buy list shows how many of the highlighted item you already carry, 0 when none",
+      "SELECT QUICK SWITCH (always on): SELECT on a party member, then A or SELECT on another swaps them; B cancels",
+      "BIGGER BAG (always on): 999 to a stack on every game; on Gen 1/2 the item pocket also holds 255 rows",
+      "Red/Blue/Yellow only (always on): an EXP bar in battle and in the party menu, the caught-ball icon beside owned wild Pokemon, and -- with Gold, Silver or Crystal imported -- the Gen 2 pocketed bag",
+    },
+    added = {
+      "EDIT START MENU: move, hide and show START menu rows, per generation (MODS can be moved, never hidden)",
+      "CENTER CAMERA (Gen 1/2 only): puts the player on the true horizontal centre of the Game Boy screen",
+      "CHOOSE PKMN: OFF / TRAINER / T+WILD -- the opponent comes out first, then you pick who answers",
+      "DECAPITALIZATION: ALL-CAPS names and menu words become Title-case (Quick Attack, Item / Run, Hall of Fame), an ALL-CAPS sentence gets sentence case; abbreviations (TM, HM, PKMN, HP, PP...) and words with digits stay",
+      "FAST POKECENTER: OFF / FAST (the nurse's first line, then straight into the heal, no question asked) / NOW (no text at all); the player turns around afterwards",
+      "FIELD MOVES: any Pokemon that could learn a field move can use it; badges, context and the TM/HM-in-bag rule still apply; eight-row cap kept",
+      "FULL SCREEN MENUS (GBA games only): OFF / ON -- menus that cover the whole screen are scaled up to the window's height (adapted from Panduino's Gen3-Full-Height-Menus)",
+      "GAMBLE ODDS: NORMAL / LUCKY (Game Corner slots and Gen 2 card flip pay out about twice as often)",
+      "HIDDEN ITEM SHINE: a small twinkle over hidden items",
+      "KEEP TMS: TMs are never used up",
+      "LOW HP BEEP: ON (BEEPS) / OFF (MUTED)",
+      "RELEARN MOVES: a RELEARN row in the party submenu",
+      "REMATCH: OFF / ON (NORMAL) / ON (TRAINING) -- rematch any trainer you've beaten; TRAINING scales them to your progress",
+      "RENAME: a RENAME row in the party submenu (Name Rater rules: empty keyboard, an empty answer keeps the name, and the game says which happened)",
+      "RUNNING SHOES: OFF / B TO RUN (Gen 3: the game's own Running Shoes, unlocked early)",
+      "SCROLLING: OFF / NORMAL / FAST -- hold the d-pad in menus (FAST holds 14 frames then steps every 8; NORMAL is 35% slower)",
+    },
+    known = {
+      "Gen 3 BIGGER BAG raises the stack to 999 but keeps each pocket's row count: those rows are a fixed block of the cart's save",
+      "GAMBLE ODDS LUCKY does not touch Emerald's roulette: the ball is a physics simulation and a forced result would not match where it lands",
+      "Gen 1/2 B TO RUN is 1.78x (a 9-frame step): the engine counts whole frames, and 9 is the nearest to 16/1.7; 10 would be 1.6x",
+    },
+  },
+  credits = {
+    { who = "piftee, Nexhas28 and Waifu4Life", for_ = "gen1recomp-modern-ui-suite (https://github.com/piftee/gen1recomp-modern-ui-suite), qol_toggles (https://github.com/Nexhas28/qol_toggles) and Project-Highlander-Gen3 (https://github.com/Waifu4Life/Project-Highlander-Gen3): references for where quality-of-life features hook into the game" },
+    { who = "WizzStar", for_ = "PKMN-G123R-HoldToScroll-Mod (MIT, https://github.com/WizzStar/PKMN-G123R-HoldToScroll-Mod), which SCROLLING adapts; its MIT notice is in lib/scroll.lua" },
+    { who = "Panduino", for_ = "Gen3-Full-Height-Menus (https://github.com/Panduino/Gen3-Full-Height-Menus/), which FULL SCREEN MENUS adapts" },
+    { who = "ZyranCZ", for_ = "Trainers-Let-You-Choose-Lead-Pokemon (https://github.com/ZyranCZ/Trainers-Let-You-Choose-Lead-Pokemon), whose battle-opening approach CHOOSE PKMN follows" },
+    { who = "Nezara", for_ = "gen1recomp-centered-camera (https://github.com/Nezara/gen1recomp-centered-camera), the analysis CENTER CAMERA is built on" },
+    { who = "BOIS CLUB GAMES, LLC", for_ = "the Pokemon Gen 1 Recompilation Project this is built for (https://github.com/bryanthaboi/gen1recomp)" },
+  },
+  compat = { engine = ">=0.1.69 <3.0.0", modApi = 2,
+             games = { "red", "blue", "yellow", "gold", "silver", "crystal",
+                       "ruby", "sapphire", "emerald", "firered", "leafgreen" } },
+}
