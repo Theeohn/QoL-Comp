@@ -940,6 +940,161 @@ for gen = 1, 3 do
       SM._setKnown({}, {})
     end
 
+    -- v1.6: EXP SHARE, through each generation's own award routine.  Party:
+    -- 1 fought, 2 benched, 3 fainted, (Gen 2/3: 4 an egg), last at level 100.
+    do
+      local tag = "gen" .. gen .. " "
+      local Runtime = require("src.mods.Runtime")
+      rawset(I.core.opts, "exp_share", nil)
+      local function setMode(m)
+        r.loader.modOptions.qol_comp = r.loader.modOptions.qol_comp or {}
+        r.loader.modOptions.qol_comp.exp_share = m
+        I.core.refresh()
+      end
+      local ko
+      if gen == 1 then
+        local T = require("tests.modkit")
+        local Data = T.fixtures.fresh()
+        require("src.render.Font").load(Data)
+        require("src.battle.TypeChart").load(Data)
+        local BattleState = require("src.battle.BattleState")
+        local Pokemon = require("src.pokemon.Pokemon")
+        local SaveData = require("src.core.SaveData")
+        ko = function()
+          local save = SaveData.newGame()
+          save.player.id = 1234
+          save.party = { Pokemon.new(Data, "FIXMON_A", 20), Pokemon.new(Data, "FIXMON_A", 20),
+                         Pokemon.new(Data, "FIXMON_A", 20), Pokemon.new(Data, "FIXMON_A", 100) }
+          for _, mon in ipairs(save.party) do mon.otId = 1234 end
+          save.party[3].hp = 0
+          local game = { data = Data, save = save,
+            stack = { top = function() return nil end, push = function() end } }
+          local battle = BattleState.newWild(game, "FIXMON_C", 10)
+          battle.participants = { [save.party[1]] = true }
+          local be, bs = {}, {}
+          for i, mon in ipairs(save.party) do be[i] = mon.exp; bs[i] = mon.statExp.hp or 0 end
+          battle:awardExp()
+          local out = {}
+          for i, mon in ipairs(save.party) do
+            out[i] = (mon.exp - be[i]) .. "/" .. ((mon.statExp.hp or 0) - bs[i])
+          end
+          return table.concat(out, " ")
+        end
+        setMode("off")
+        eq(ko(), "94/44 0/0 0/0 0/0", tag .. "EXP SHARE OFF: the game's own award")
+        setMode("gen2")
+        eq(ko(), "94/44 47/22 0/0 0/0", tag .. "ON (GEN2): the next Pokemon gets half the EXP and stat exp")
+        setMode("gen6")
+        eq(ko(), "94/44 47/44 0/0 47/44",
+          tag .. "ON (GEN6): the bench gets 50% EXP and full stat exp, level 100 included, the fainted nothing")
+      elseif gen == 2 then
+        local Battle = require("src.battle.gen2.Battle")
+        local Mon = require("src.battle.gen2.Mon")
+        local DATA = {
+          pokemon = {
+            growthRates = { GROWTH_SLOW = { numerator = 5, denominator = 4, squared = 0, linear = 0, constant = 0 } },
+            MACHOP = { id = "MACHOP", index = 66, name = "MACHOP",
+              baseStats = { hp = 70, attack = 80, defense = 50, speed = 35, specialAttack = 35, specialDefense = 35 },
+              types = { "NORMAL", "NORMAL" }, catchRate = 180, baseExp = 75, growthRate = "GROWTH_SLOW",
+              genderRatio = 63, levelMoves = { { level = 1, move = "TACKLE" } }, evolutions = {} },
+            PIDGEY = { id = "PIDGEY", index = 16, name = "PIDGEY",
+              baseStats = { hp = 40, attack = 45, defense = 40, speed = 56, specialAttack = 35, specialDefense = 35 },
+              types = { "NORMAL", "NORMAL" }, catchRate = 255, baseExp = 55, growthRate = "GROWTH_SLOW",
+              genderRatio = 127, levelMoves = { { level = 1, move = "TACKLE" } }, evolutions = {} },
+          },
+          moves = { TACKLE = { id = "TACKLE", name = "TACKLE", power = 35, type = "NORMAL",
+            accuracy = 95, pp = 35, effect = "EFFECT_NORMAL_HIT" } },
+          text = require("tests.gen2_battle_text_fixture")(),
+          type_chart = { battleRules = require("tests.gen2_battle_rules_fixture")(),
+            types = { NORMAL = { id = "NORMAL", index = 0, category = "physical" } }, matchups = {} },
+          items = { EXP_SHARE = { id = "EXP_SHARE", name = "EXP.SHARE", heldEffect = "HELD_NONE", heldParameter = 0 } },
+        }
+        local perfect = { attack = 15, defense = 15, speed = 15, special = 15 }
+        perfect.hp = Mon.hpDV(perfect)
+        ko = function(holder)
+          local party = {}
+          for i = 1, 5 do
+            party[i] = Mon.new(DATA, "MACHOP", i == 5 and 100 or 20, { dvs = perfect })
+            party[i].otId = 31337
+          end
+          party[3].hp = 0
+          party[4].isEgg = true
+          if holder then party[2].item = "EXP_SHARE" end
+          local wild = Mon.new(DATA, "PIDGEY", 14, { dvs = perfect })
+          local battle = Battle.new({ data = DATA, party = party, wild = wild,
+            save = { player = { id = 31337, badges = {} } },
+            random = function(n) return (n or 1) > 1 and 1 or 0 end })
+          battle.participants = { [1] = true }
+          local be, bs = {}, {}
+          for i, mon in ipairs(party) do be[i] = mon.experience; bs[i] = mon.statExp.hp or 0 end
+          battle:awardExperience(wild)
+          local out = {}
+          for i, mon in ipairs(party) do
+            out[i] = (mon.experience - be[i]) .. "/" .. ((mon.statExp.hp or 0) - bs[i])
+          end
+          return table.concat(out, " ")
+        end
+        setMode("off")
+        eq(ko(), "110/40 0/0 0/0 0/0 0/0", tag .. "EXP SHARE OFF: the game's own award")
+        setMode("gen2")
+        eq(ko(), "110/40 55/20 0/0 0/0 0/0", tag .. "ON (GEN2): the next Pokemon gets half the EXP and stat exp")
+        setMode("gen6")
+        eq(ko(), "110/40 55/40 0/0 0/0 0/40",
+          tag .. "ON (GEN6): bench 50% EXP + full stat exp, level 100 stat exp, no egg, no fainted")
+        eq(ko(true), "110/40 55/40 0/0 0/0 0/40", tag .. "ON (GEN6): a held EXP.SHARE changes nothing")
+      else
+        local Experience = require("src.core.game3.battle.experience")
+        local P = require("src.core.game3.pokemon")
+        local G3 = require("src.mods.Gen3Compat")
+        local HeldItems = require("src.core.game3.battle.held_items")
+        local realYield, realEv, realView, realEff = Experience.expYield, P.evYield, G3.speciesView, HeldItems.effectOf
+        Experience.expYield = function() return 100 end
+        P.evYield = function() return { hp = 2 } end
+        G3.speciesView = function(sp) return { id = sp, name = "MON" } end
+        HeldItems.effectOf = function(item)
+          if item == "EXP_SHARE" then return HeldItems.HOLD.EXP_SHARE end
+          return realEff(item)
+        end
+        ko = function(holder)
+          local party = {}
+          for i = 1, 5 do
+            party[i] = { species = 1, level = (i == 5) and 100 or 10, hp = 30, maxHp = 30, exp = 1000, evs = {} }
+          end
+          party[3].hp = 0
+          party[4].isEgg = true
+          if holder then party[2].item = "EXP_SHARE" end
+          local st = { playerParty = party, wild = true, player = { mon = party[1], partyIndex = 1 } }
+          local foe = { mon = { species = 16, level = 14, hp = 0 }, species = 16, level = 14,
+            participants = { [1] = true } }
+          local be, bv = {}, {}
+          for i, mon in ipairs(party) do be[i] = mon.exp; bv[i] = P.evsOf(mon).hp or 0 end
+          Experience.awardFoe(st, foe, { trainer = false })
+          local out = {}
+          for i, mon in ipairs(party) do out[i] = (mon.exp - be[i]) .. "/" .. ((P.evsOf(mon).hp or 0) - bv[i]) end
+          return table.concat(out, " ")
+        end
+        setMode("off")
+        eq(ko(), "200/2 0/0 0/0 0/0 0/0", tag .. "EXP SHARE OFF: the game's own award")
+        setMode("gen2")
+        eq(ko(), "200/2 100/1 0/0 0/0 0/0", tag .. "ON (GEN2): the next Pokemon gets half the EXP and EVs")
+        setMode("gen6")
+        eq(ko(), "200/2 100/2 0/0 0/0 0/2",
+          tag .. "ON (GEN6): bench 50% EXP + full EVs, level 100 EVs, no egg, no fainted")
+        eq(ko(true), "200/2 100/2 0/0 0/0 0/2", tag .. "ON (GEN6): a held EXP. SHARE changes nothing")
+        Experience.expYield, P.evYield, G3.speciesView, HeldItems.effectOf = realYield, realEv, realView, realEff
+      end
+      -- a catch pays out under ON (GEN6) only
+      local function catchPays()
+        local _, v = pcall(Runtime.call, "battle.catch_exp", function() return false end, { battle = {} })
+        return v
+      end
+      setMode("gen6")
+      eq(catchPays(), true, tag .. "ON (GEN6): a catch pays out like a KO")
+      setMode("gen2")
+      eq(catchPays(), false, tag .. "ON (GEN2): a catch pays nothing, as in the game")
+      setMode("off")
+    end
+
     -- v1.5: RENAME in the PC's per-Pokemon menu
     do
       local tag = "gen" .. gen .. " "
