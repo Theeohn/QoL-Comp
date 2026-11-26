@@ -436,8 +436,9 @@ for gen = 1, 3 do
       Profile.family, MoveLearn.relearnableMoves = realFamily, realMoves
       Rse.show, Frlg.show = realRse, realFrlg
 
-      -- RUNNING SHOES (B TO RUN) answers the game's own run check by its
-      -- own rules minus the shoes flag; the step itself is never touched
+      -- RUNNING SHOES (B TO RUN) answers the game's own run check yes
+      -- anywhere you can walk (no shoes flag, no "no running here"); the
+      -- step itself is never touched
       -- (0.1.2 rebuilt the step, and Emerald's sprite flickered)
       local Player = require("src.core.game3.player")
       check(rawget(Player, "__qol_comp_orig_ordinaryStepFrames") == nil,
@@ -453,11 +454,20 @@ for gen = 1, 3 do
       setOpt(I, "running_shoes", "b")
       eq(Player.canDash(), true, "gen3 B TO RUN: runs without the shoes")
       blocked = true
-      eq(Player.canDash(), false, "gen3 not where the game forbids running")
+      eq(Player.canDash(), true, "gen3 B TO RUN: runs where the game forbids running (indoors, long grass...)")
+      setOpt(I, "running_shoes", "off")
+      eq(Player.canDash(), false, "gen3 OFF: the game's own rules there")
+      setOpt(I, "running_shoes", "b")
       blocked = false
       Player.underwater = true
       eq(Player.canDash(), false, "gen3 not underwater")
       Player.underwater = false
+      Player.biking = true
+      eq(Player.canDash(), false, "gen3 not on a bike")
+      Player.biking = false
+      Player.surfing = true
+      eq(Player.canDash(), false, "gen3 not while surfing")
+      Player.surfing = false
       Space.getStore = function() return nil end
       eq(Player.canDash(), false, "gen3 not before the field is up")
       Space.getStore, Player.runningDisallowed = realStore, realDisallowed
@@ -597,6 +607,552 @@ for gen = 1, 3 do
       C.refresh()
       eq(C.opt("hidden_shine"), true, "gen" .. gen .. " an options change re-reads at once")
       setOpt(I, "hidden_shine", false)
+    end
+
+    -- v1.5: with RENAME on, a Pokemon arrives without a nickname question
+    do
+      local tag = "gen" .. gen .. " "
+      local Runtime = require("src.mods.Runtime")
+      rawset(I.core.opts, "rename", nil)
+      local function rename(v)
+        r.loader.modOptions.qol_comp = r.loader.modOptions.qol_comp or {}
+        r.loader.modOptions.qol_comp.rename = v
+        I.core.refresh()
+      end
+      local alwaysAsk = function() return true end
+      rename(false)
+      local _, asked = pcall(Runtime.call, "catch.nickname", alwaysAsk, { species = 1 }, {})
+      eq(asked, true, tag .. "RENAME off: a catch still asks for a nickname")
+      rename(true)
+      local _, skipped = pcall(Runtime.call, "catch.nickname", alwaysAsk, { species = 1 }, {})
+      eq(skipped, false, tag .. "RENAME on: a catch keeps the species name, no question")
+      local gift = { species = 1, level = 5, isEgg = false }
+      pcall(Runtime.emit, "pokemon.before_give", gift)
+      eq(gift.nickname, "", tag .. "RENAME on: a gift skips the question")
+      local named = { species = 1, level = 5, nickname = "SHUCKIE" }
+      pcall(Runtime.emit, "pokemon.before_give", named)
+      eq(named.nickname, "SHUCKIE", tag .. "a name the game gives is kept")
+      local egg = { species = 1, level = 5, isEgg = true }
+      pcall(Runtime.emit, "pokemon.before_give", egg)
+      eq(egg.nickname, nil, tag .. "an egg is left alone")
+      rename(false)
+      local plain = { species = 1, level = 5 }
+      pcall(Runtime.emit, "pokemon.before_give", plain)
+      eq(plain.nickname, nil, tag .. "RENAME off: a gift asks as normal")
+
+      if gen == 2 then
+        local NS = I.nickskip
+        local CommonText = require("src.core.gen2.CommonText")
+        local World = require("src.world.gen2.World")
+        local realGet = CommonText.get
+        CommonText.get = function(_, key)
+          if key == "_BreedAskNicknameText" then return "Give a nickname to\n{STRBUF}?" end
+          return realGet(_, key)
+        end
+        local w = setmetatable({ lastText = "Give a nickname to\nTOGEPI?", text = {} }, { __index = World })
+        eq(NS._isHatchQuestion(w), true, tag .. "the hatch question is recognised")
+        local other = setmetatable({ lastText = "Want to SAVE?", text = {} }, { __index = World })
+        eq(NS._isHatchQuestion(other), false, tag .. "and no other question is")
+        rename(true)
+        local answer
+        World.askYesNo(w, function(yes) answer = yes end)
+        eq(answer, false, tag .. "RENAME on: the hatch question is answered NO unseen")
+        rename(false)
+        CommonText.get = realGet
+        check(patched("src.script.gen2.Specials", "askNickname"),
+          tag .. "the Bug-Catching Contest question is covered")
+      end
+
+      if gen == 3 then
+        local NS = I.nickskip
+        check(patched("src.ui.game3.egg_hatch", "update"), tag .. "the FRLG/Emerald hatch question is covered")
+        check(patched("src.ui.game3.rs.egg_hatch", "update"), tag .. "the Ruby/Sapphire hatch question is covered")
+        local EggHatch = require("src.ui.game3.egg_hatch")
+        local savedState, savedTimer = EggHatch._state, EggHatch._timer
+        rename(true)
+        EggHatch._state = "nickname_msg"
+        NS._afterHatchUpdate()
+        eq(EggHatch._state, "fade_out", tag .. "RENAME on: the hatched Pokemon is not asked for a name")
+        EggHatch._state, EggHatch._timer = savedState, savedTimer
+        rename(false)
+
+        local RomText = require("src.core.game3.rom_text")
+        local TextIR = require("src.core.game3.scripting.text_ir")
+        local Q = "Text_GiveNicknameToThisMon"
+        local was = RomText.overrides[Q]
+        local ir = TextIR.fromAscii("Do you want to give a\nnickname to this BULBASAUR?")
+        RomText.overrides[Q] = ir
+        local vm = { ctx = { stringVars = {}, data = {} },
+          getText = function(_, k) if k == "g3:00001234" then return ir end end }
+        eq(NS._isGiftQuestion(vm, { ptr = 0x1234 }), true, tag .. "a gift's nickname question is recognised")
+        local vm2 = { ctx = { stringVars = {}, data = {} },
+          getText = function() return TextIR.fromAscii("Here, take this.") end }
+        eq(NS._isGiftQuestion(vm2, { ptr = 0x9999 }), false, tag .. "and an ordinary line is not")
+        rename(true)
+        local reached = {}
+        local vanilla = function(_, op) reached[#reached + 1] = op return false end
+        for _, op in ipairs({ "message", "waitmessage", "yesnobox" }) do
+          pcall(Runtime.call, "script.command", vanilla, { vm = vm }, op, { ptr = 0x1234, op = op })
+        end
+        eq(#reached, 0, tag .. "RENAME on: the gift question and its YES/NO never show")
+        pcall(Runtime.call, "script.command", vanilla, { vm = vm2 }, "message", { ptr = 0x9999 })
+        eq(reached[1], "message", tag .. "and the script's next line shows as normal")
+        rename(false)
+        reached = {}
+        pcall(Runtime.call, "script.command", vanilla, { vm = vm }, "message", { ptr = 0x1234 })
+        eq(reached[1], "message", tag .. "RENAME off: the gift question shows")
+        RomText.overrides[Q] = was
+      end
+    end
+
+    -- v1.52: the editor's list IS the START menu's order -- including rows
+    -- that unlock after the menu was first learned (Crystal's POKEDEX and
+    -- POKEGEAR), a layout never edited, and a row moved after that
+    if gen == 2 then
+      local tag = "gen2 "
+      local SM = I.startmenu
+      local Runtime = require("src.mods.Runtime")
+      SM.reset(); SM._setKnown({}, {})
+      local function build(rows)
+        local items = {}
+        for i, id in ipairs(rows) do items[i] = { value = id, label = id:upper() } end
+        local _, out = pcall(Runtime.call, "ui.start_menu.items", function(_, x) return x end, nil, items)
+        local o = {}
+        for i, it in ipairs(out) do o[i] = SM.keyOf(it) end
+        return table.concat(o, ",")
+      end
+      local function editor()
+        local o = {}
+        for i, row in ipairs(SM._editorRows()) do o[i] = row.key end
+        return table.concat(o, ",")
+      end
+      local early = { "pokemon", "pack", "status", "save", "option", "mods", "quit" }
+      local later = { "pokedex", "pokemon", "pack", "pokegear", "status", "save", "option", "mods", "quit" }
+      build(early)
+      eq(build(later), "POKEDEX,POKEMON,PACK,POKEGEAR,STATUS,SAVE,OPTION,MODS,QUIT",
+        tag .. "rows unlocked later keep the game's order")
+      eq(editor(), "POKEDEX,POKEMON,PACK,POKEGEAR,STATUS,SAVE,OPTION,MODS,QUIT",
+        tag .. "and the editor lists them in that same order")
+      -- a layout set BEFORE POKEDEX and POKEGEAR unlock, then they unlock
+      SM.reset(); SM._setKnown({}, {})
+      build(early)
+      SM._setLayout({ "SAVE", "POKEMON", "PACK", "STATUS", "OPTION", "MODS", "QUIT" }, {})
+      eq(build(early), "SAVE,POKEMON,PACK,STATUS,OPTION,MODS,QUIT", tag .. "the layout as set")
+      eq(build(later), "SAVE,POKEDEX,POKEMON,PACK,POKEGEAR,STATUS,OPTION,MODS,QUIT",
+        tag .. "an unlocked row goes just above the row below it in the game's menu")
+      eq(editor(), "SAVE,POKEDEX,POKEMON,PACK,POKEGEAR,STATUS,OPTION,MODS,QUIT",
+        tag .. "and the editor shows it right there")
+      -- and once placed, it stays where it is put
+      SM._setLayout({ "QUIT", "POKEGEAR", "SAVE", "POKEDEX", "POKEMON", "PACK", "STATUS", "OPTION", "MODS" }, {})
+      build(early)
+      eq(build(later), "QUIT,POKEGEAR,SAVE,POKEDEX,POKEMON,PACK,STATUS,OPTION,MODS",
+        tag .. "every row stays exactly where it was put")
+      eq(editor(), "QUIT,POKEGEAR,SAVE,POKEDEX,POKEMON,PACK,STATUS,OPTION,MODS",
+        tag .. "the editor is that same column")
+      SM.reset(); SM._setKnown({}, {})
+    end
+
+    -- v1.53: every edit lands exactly where the player steered it, and
+    -- stays there.  The test keeps its own model of the column (MOVE swaps
+    -- neighbours, an unlocked row goes just above the row below it in the
+    -- game's menu) and Crystal's real START menu must match it after every
+    -- edit, in the menu still open behind the editor and in fresh ones.
+    if gen == 2 then
+      local tag = "gen2 "
+      local SM = I.startmenu
+      SM.reset(); SM._setKnown({}, {})
+      local Start2 = require("src.ui.gen2.StartMenu")
+      local realText = r.data.text
+      r.data.text = setmetatable({}, { __index = function(_, k)
+        local n = tostring(k):match("^StartMenu%.(.-)String$")
+        return n and n:upper() or "TXT"
+      end })
+      local GAME = { "pokedex", "pokemon", "pack", "pokegear", "status", "save", "option", "mods", "quit" }
+      local states, presses = {}, {}
+      local input = { wasPressed = function(_, b) return presses[b] == true end,
+        isDown = function() return false end }
+      local game = { data = r.data, input = input, modStatus = { available = { {} } },
+        save = { player = { name = "KRIS" }, party = { {} }, options = {} },
+        stack = { states = states,
+          push = function(_, st) states[#states + 1] = st end,
+          pop = function() return table.remove(states) end,
+          top = function() return states[#states] end } }
+      local unlocked = { mods = true, pokedex = false, party = true, pack = true, pokegear = false }
+      local function open()
+        local m = Start2.new(game, { save = game.save, unlocked = unlocked })
+        m.screenId = "Gen2StartMenu"
+        return m
+      end
+      local function ids(m) local o = {} for i, it in ipairs(m.items) do o[i] = it.value end return table.concat(o, ",") end
+      local model, hidden = {}, {}
+      for v in ids(open()):gmatch("[^,]+") do model[#model + 1] = v end
+      local function unlock(id)
+        if unlocked[id] then return end
+        unlocked[id] = true
+        local gi
+        for i, g in ipairs(GAME) do if g == id then gi = i end end
+        local at
+        for j = gi + 1, #GAME do
+          for p, m in ipairs(model) do if m == GAME[j] then at = p break end end
+          if at then break end
+        end
+        table.insert(model, at or (#model + 1), id)
+      end
+      local function want()
+        local o = {}
+        for _, id in ipairs(model) do if not hidden[id] or id == "mods" then o[#o + 1] = id end end
+        return table.concat(o, ",")
+      end
+      local seed = 1
+      local function rnd(n) seed = (seed * 1103515245 + 12345) % 2147483648 return seed % n + 1 end
+      local bad, firstBad = 0, nil
+      for step = 1, 160 do
+        if step == 40 then unlock("pokedex") end
+        if step == 90 then unlock("pokegear") end
+        for i = #states, 1, -1 do states[i] = nil end
+        local menu = open()
+        states[1] = menu
+        SM.openEditor(game)
+        local ed = states[#states]
+        local function press(b)
+          for k in pairs(presses) do presses[k] = nil end
+          presses[b] = true; ed:update(); presses[b] = nil
+        end
+        local at = rnd(#model)
+        SM._lastEditor.index = at
+        local act = rnd(10)
+        press("a")
+        if act <= 7 then
+          press("a")
+          local pos = at
+          for _ = 1, rnd(5) do
+            local d = rnd(2) == 1 and -1 or 1
+            press(d < 0 and "up" or "down")
+            local j = pos + d
+            if j >= 1 and j <= #model then model[pos], model[j] = model[j], model[pos]; pos = j end
+          end
+          press("a")
+        elseif act <= 9 and model[at] ~= "mods" then
+          press("down"); press("a"); hidden[model[at]] = not hidden[model[at]]
+        else
+          press("b")
+        end
+        press("b")
+        local w = want()
+        if ids(menu) ~= w or ids(open()) ~= w or ids(open()) ~= w then
+          bad = bad + 1
+          firstBad = firstBad or ("step " .. step .. ": want " .. w .. " got " .. ids(open()))
+        end
+      end
+      eq(bad, 0, tag .. "160 random edits: the START menu is always exactly the column as edited"
+        .. (firstBad and (" (" .. firstBad .. ")") or ""))
+      SM.reset(); SM._setKnown({}, {})
+      r.data.text = realText
+    end
+
+    -- v1.51: a layout edited while the START menu is still open under the
+    -- editor (START -> OPTION -> QOL COMP -> EDIT START MENU) shows the
+    -- moment you back out to it, not only after START is reopened
+    if gen == 2 then
+      local tag = "gen2 "
+      local SM = I.startmenu
+      SM.reset(); SM._setKnown({}, {})
+      local Start2 = require("src.ui.gen2.StartMenu")
+      local realText = r.data.text
+      r.data.text = setmetatable({}, { __index = function(_, k)
+        local n = tostring(k):match("^StartMenu%.(.-)String$")
+        return n and n:upper() or "TXT"
+      end })
+      local states, presses = {}, {}
+      local input = { wasPressed = function(_, b) return presses[b] == true end,
+        isDown = function() return false end }
+      local game = { data = r.data, input = input, modStatus = { available = { {} } },
+        save = { player = { name = "KRIS" }, party = { {} }, options = {} },
+        stack = { states = states,
+          push = function(_, st) states[#states + 1] = st end,
+          pop = function() return table.remove(states) end,
+          top = function() return states[#states] end } }
+      local unlocked = { mods = true, pokedex = true, party = true, pack = true, pokegear = true }
+      local start = Start2.new(game, { save = game.save, unlocked = unlocked })
+      start.screenId = "Gen2StartMenu"
+      states[#states + 1] = start
+      local function order(menu)
+        local o = {}
+        for i, it in ipairs(menu.items) do o[i] = tostring(it.value) end
+        return table.concat(o, ",")
+      end
+      eq(order(start), "pokedex,pokemon,pack,pokegear,status,save,option,mods,quit",
+        tag .. "Crystal's START menu as built")
+      SM.openEditor(game)
+      local ed = states[#states]
+      local function press(b)
+        for k in pairs(presses) do presses[k] = nil end
+        presses[b] = true; ed:update(); presses[b] = nil
+      end
+      ed.index = 5                         -- the player's card
+      press("a"); press("a")               -- A, MOVE
+      for _ = 1, 4 do press("up") end
+      press("a")                           -- set it down
+      press("b")                           -- leave the editor
+      eq(states[#states], start, tag .. "backing out lands on the START menu that was open")
+      eq(order(start), "status,pokedex,pokemon,pack,pokegear,save,option,mods,quit",
+        tag .. "and it already shows the new order")
+      eq(tostring(start.list.items[1].value), "status", tag .. "the cursor list matches it")
+      local fresh = Start2.new(game, { save = game.save, unlocked = unlocked })
+      eq(order(fresh), "status,pokedex,pokemon,pack,pokegear,save,option,mods,quit",
+        tag .. "and so does the next START menu")
+      -- HIDE applies to the open menu too
+      states[#states + 1] = ed; ed.open = true
+      ed.index = 3
+      press("a"); press("down"); press("a") -- A, HIDE
+      check(not order(start):find("pokemon", 1, true), tag .. "a hidden row leaves the open menu")
+      SM.reset()
+      eq(order(start), "pokedex,pokemon,pack,pokegear,status,save,option,mods,quit",
+        tag .. "and RESET LAYOUT restores it there too")
+      SM._setKnown({}, {})
+      r.data.text = realText
+    elseif gen == 3 then
+      local tag = "gen3 "
+      local SM = I.startmenu
+      SM.reset(); SM._setKnown({}, {})
+      local SM3 = require("src.ui.game3.start_menu")
+      local Runtime = require("src.mods.Runtime")
+      local wasOpen, wasEntries, wasCursor = SM3.open, SM3.ENTRIES, SM3.cursor
+      local wasTut, wasKind = SM3._tutorial, SM3._kind
+      SM3._tutorial, SM3._kind = false, "normal"
+      local entries = { { id = "pokedex", label = "POKeDEX" }, { id = "pokemon", label = "POKeMON" },
+        { id = "bag", label = "BAG" }, { id = "trainer", label = "RED" }, { id = "save", label = "SAVE" },
+        { id = "option", label = "OPTION" }, { id = "exit", label = "EXIT" } }
+      local _, built = pcall(Runtime.call, "ui.start_menu.items", function(_, i) return i end, nil, entries)
+      SM3.ENTRIES, SM3.open, SM3.cursor = built, true, 1
+      SM._setLayout({ "TRAINER", "POKEDEX", "POKEMON", "BAG", "SAVE", "OPTION", "EXIT" }, { "BAG" })
+      SM._refreshOpen()
+      local o = {}
+      for i, e in ipairs(SM3.ENTRIES) do o[i] = e.id end
+      eq(table.concat(o, ","), "trainer,pokedex,pokemon,save,option,exit",
+        tag .. "an open START menu takes a layout change at once")
+      SM.reset()
+      o = {}
+      for i, e in ipairs(SM3.ENTRIES) do o[i] = e.id end
+      eq(table.concat(o, ","), "pokedex,pokemon,bag,trainer,save,option,exit",
+        tag .. "and RESET LAYOUT gives the hidden row back")
+      SM3.open, SM3.ENTRIES, SM3.cursor, SM3._tutorial, SM3._kind = wasOpen, wasEntries, wasCursor, wasTut, wasKind
+      SM._setKnown({}, {})
+    end
+
+    -- v1.5: RENAME in the PC's per-Pokemon menu
+    do
+      local tag = "gen" .. gen .. " "
+      local A = I.arm.A
+      local realRename = A.rename
+      local renamed, renameOpts
+      A.rename = function(_, m, opts) renamed, renameOpts = m, opts or {} end
+      rawset(I.core.opts, "rename", nil)
+      local function rename(v)
+        r.loader.modOptions.qol_comp = r.loader.modOptions.qol_comp or {}
+        r.loader.modOptions.qol_comp.rename = v
+        I.core.refresh()
+      end
+      if gen == 1 then
+        local Menu = require("src.ui.Menu")
+        local mon = { species = "PIDGEY", level = 5 }
+        local row = { label = "PIDGEY", value = 1 }
+        local list = { kind = "pc_box_withdraw", index = 1, items = { row } }
+        local game = { save = { boxes = { { mon } }, currentBox = 1, party = {} },
+          stack = { top = function() return list end, push = function() end } }
+        local Boxes = require("src.pokemon.Boxes")
+        local realActive = Boxes.active
+        Boxes.active = function() return game.save.boxes[1] end
+        local function submenu()
+          return Menu.new(game, { { label = "WITHDRAW" }, { label = "STATS", keepOpen = true },
+            { label = "CANCEL" } }, { tx = 9, ty = 10, tw = 11, th = 8, noSound = true })
+        end
+        rename(false)
+        eq(#submenu().items, 3, tag .. "RENAME off: the PC submenu is the cart's")
+        rename(true)
+        local m = submenu()
+        eq(#m.items, 4, tag .. "RENAME on: the PC submenu gets a row")
+        eq(m.items[3].label, "RENAME", tag .. "RENAME sits just above CANCEL")
+        eq(m.ty .. "," .. m.th, "8,10", tag .. "and the box grows to hold it")
+        m.items[3].onSelect()
+        eq(renamed, mon, tag .. "RENAME names the Pokemon in the box")
+        mon.nickname = "BIRDY"
+        renameOpts.after(true)
+        eq(row.label, "BIRDY", tag .. "and the box list shows the new name")
+        list.kind = "party_menu"
+        eq(#submenu().items, 3, tag .. "a menu that is not the PC's is untouched")
+        Boxes.active = realActive
+      elseif gen == 2 then
+        local BoxMenu = require("src.ui.gen2.BoxMenu")
+        local Chrome = require("src.ui.gen2.Chrome")
+        local Boxes2 = require("src.core.gen2.Boxes")
+        local mon = { species = "PIDGEY", level = 5, nickname = "PIDGEY" }
+        local save = { boxes = { { mon } }, currentBox = 1, boxNames = { "BOX1" },
+          party = { { species = "CYNDAQUIL", level = 5 } } }
+        local realText = r.data.text
+        r.data.text = setmetatable({}, { __index = function(_, k)
+          local n = tonumber(tostring(k):match("#(%d)$"))
+          return n and ({ "WITHDRAW", "STATS", "RELEASE", "CANCEL" })[n] or "TXT"
+        end })
+        local game = { data = r.data, save = save,
+          stack = { push = function() end, pop = function() end, top = function() end } }
+        local okNew, bm = pcall(BoxMenu.new, game, { mode = "withdraw", save = save })
+        check(okNew, tag .. "the PC box screen opens headless")
+        if okNew then
+          bm.phase = "submenu"
+          rename(false)
+          eq(#bm:submenuRows(), 4, tag .. "RENAME off: the PC submenu is the cart's")
+          rename(true)
+          local rows = bm:submenuRows()
+          local ids = {}
+          for i, row in ipairs(rows) do ids[i] = row.id end
+          eq(table.concat(ids, ","), "WITHDRAW,STATS,RELEASE,QOL_RENAME,CANCEL",
+            tag .. "RENAME on: RENAME sits just above CANCEL")
+          eq(bm:rom("QOL_RENAME"), "RENAME", tag .. "and reads RENAME")
+          local boxes, prints = {}, {}
+          local liveBox, livePrint = Chrome.box, Chrome.print
+          Chrome.box = function(x, y, w, h, ...) boxes[#boxes + 1] = x .. "," .. y .. "," .. w .. "," .. h return liveBox(x, y, w, h, ...) end
+          Chrome.print = function(t, x, y, ...) prints[tostring(t)] = x .. "," .. y return livePrint(t, x, y, ...) end
+          local okDraw, errDraw = pcall(bm.drawPanel, bm)
+          Chrome.box, Chrome.print = liveBox, livePrint
+          check(okDraw, tag .. "the five-row submenu draws (" .. tostring(errDraw) .. ")")
+          eq(boxes[#boxes], "9,2,11,12", tag .. "in a box two rows taller")
+          eq(prints.WITHDRAW .. " " .. prints.CANCEL, "11,4 11,12", tag .. "with every row inside it")
+          eq(Chrome.box, liveBox, tag .. "and Chrome is put back after the draw")
+          bm.submenuIndex = 4
+          bm:chooseSubmenu()
+          eq(renamed, mon, tag .. "RENAME names the Pokemon in the box")
+          eq(bm.phase, nil, tag .. "and the submenu closes for the naming screen")
+          mon.isEgg = true
+          bm.phase = "submenu"
+          eq(#bm:submenuRows(), 4, tag .. "an EGG gets no RENAME row")
+          mon.isEgg = nil
+        end
+        r.data.text = realText
+      else
+        local UI = require("src.ui.game3.box_storage_ui")
+        local Window = require("src.ui.game3.window")
+        local mon = { species = 16, level = 5, nickname = "PIDGEY" }
+        local saved = { UI.mode, UI.subMode, UI._activeActions, UI._actionTarget, UI._actionSource,
+          UI.actionCursor, UI._status, UI.drawerOpen }
+        local function menu(sub)
+          UI.mode, UI.subMode = "action_menu", sub
+          UI._activeActions = { "WITHDRAW", "SUMMARY", "RELEASE", "CANCEL" }
+          UI._actionTarget = { mon = mon, loc = "box", boxId = 1, slot = 1 }
+          UI._actionSource, UI.drawerOpen = "box", false
+          I.pcrename._augment()
+          return table.concat(UI._activeActions, ",")
+        end
+        rename(false)
+        eq(menu("withdraw"), "WITHDRAW,SUMMARY,RELEASE,CANCEL", tag .. "RENAME off: the PC's action menu is the cart's")
+        rename(true)
+        eq(menu("withdraw"), "WITHDRAW,SUMMARY,RELEASE,RENAME,CANCEL", tag .. "RENAME on: RENAME sits just above CANCEL")
+        I.pcrename._augment()
+        eq(table.concat(UI._activeActions, ","), "WITHDRAW,SUMMARY,RELEASE,RENAME,CANCEL", tag .. "and is added once")
+        eq(menu("move_items"), "WITHDRAW,SUMMARY,RELEASE,CANCEL", tag .. "MOVE ITEMS gets no RENAME")
+        mon.isEgg = true
+        eq(menu("withdraw"), "WITHDRAW,SUMMARY,RELEASE,CANCEL", tag .. "an EGG gets no RENAME")
+        mon.isEgg = nil
+        -- the label: drawn by the engine's own loop (box_storage_ui's popup)
+        menu("withdraw")
+        local printed = {}
+        local livePx = Window.printPx
+        Window.printPx = function(t, x, y) printed[#printed + 1] = tostring(t) .. "@" .. x .. "," .. y end
+        I.pcrename._drawWith(function()
+          for i, act in ipairs(UI._activeActions) do
+            Window.printPx(act, 114, (5 * 8 + 2) + (i - 1) * 16)
+          end
+        end)
+        Window.printPx = livePx
+        eq(table.concat(printed, " "), "WITHDRAW@114,42 SUMMARY@114,58 RELEASE@114,74 RENAME@114,90 CANCEL@114,106",
+          tag .. "RENAME is printed in its own row")
+        eq(UI._activeActions[4], "RENAME", tag .. "and the action list is left as it was")
+        UI.actionCursor = 4
+        UI.handleInput({ wasPressed = function(_, b) return b == "a" end, isDown = function() return false end })
+        eq(renamed, mon, tag .. "A on RENAME names the Pokemon in the box")
+        renameOpts.say("PIDGEY kept its name.")
+        eq(UI.mode .. "|" .. tostring(UI._status), "message|PIDGEY kept its name.",
+          tag .. "and the result shows in the PC's own message line")
+        local Rs = require("src.ui.game3.rs.storage_policy")
+        local okRs, label = pcall(Rs.menuText, "RENAME")
+        eq(okRs and label, "RENAME", tag .. "Ruby/Sapphire's PC reads RENAME too")
+        UI.mode, UI.subMode, UI._activeActions, UI._actionTarget, UI._actionSource,
+          UI.actionCursor, UI._status, UI.drawerOpen = unpack(saved, 1, 8)
+      end
+      rename(false)
+      A.rename = realRename
+    end
+
+    -- v1.5: the OPTIONS screen's QOL COMP row opens this mod's own toggles
+    -- page (not the Mod Manager), and a change there is the same change the
+    -- manager would make
+    do
+      local tag = "gen" .. gen .. " "
+      -- earlier checks pin values straight onto the opts cache; let these
+      -- rows read the loader again
+      for _, k in ipairs({ "low_hp_beep", "scrolling", "rename" }) do rawset(I.core.opts, k, nil) end
+      I.core.refresh()
+      local presses = {}
+      local input = { wasPressed = function(_, b) return presses[b] == true end,
+        isDown = function() return false end }
+      local states = {}
+      local stack = {
+        push = function(_, st) states[#states + 1] = st end,
+        pop = function() return table.remove(states) end,
+        top = function() return states[#states] end,
+      }
+      local wrote = 0
+      local game = { mods = r.loader, save = { options = {} }, stack = stack, input = input,
+        writeOptions = function() wrote = wrote + 1 end }
+      local Stack3 = gen == 3 and require("src.ui.game3.stack") or nil
+      local function topScreen()
+        if gen == 3 then
+          local t = Stack3.top()
+          return t and t.mod
+        end
+        return states[#states]
+      end
+      local function press(btn)
+        for k in pairs(presses) do presses[k] = nil end
+        presses[btn] = true
+        I.V.frame = (I.V.frame or 0) + 1
+        local t = topScreen()
+        if gen == 3 then t.handleInput(input) else t:update() end
+        presses[btn] = nil
+      end
+      local before = gen == 3 and #Stack3._layers or #states
+      I.optionsrow.open(game)
+      local t = topScreen()
+      check(t and t.qolCompScreen, tag .. "the QOL COMP row opens the mod's own page")
+      eq(gen == 3 and #Stack3._layers or #states, before + 1, tag .. "and only that page, not the manager")
+      -- find a row's index on the page
+      local screen = I.optionsrow._lastScreen
+      local function indexOf(key)
+        for i, row in ipairs(screen.items) do if row.key == key then return i end end
+      end
+      eq(screen.items[1].label, "EDIT START MENU", tag .. "EDIT START MENU is the first row")
+      eq(screen.items[#screen.items].label, "RESET DEFAULTS", tag .. "RESET DEFAULTS is the last")
+      screen.index = indexOf("low_hp_beep")
+      press("a")
+      eq(r.loader.modOptions.qol_comp.low_hp_beep, "mute", tag .. "A steps a value in the loader")
+      eq(game.save.options.modOptions.qol_comp.low_hp_beep, "mute", tag .. "and in the save's options")
+      eq(I.core.opt("low_hp_beep"), "mute", tag .. "and the mod reads it at once")
+      check(wrote > 0, tag .. "and the options file is written")
+      eq(screen.items[screen.index].right, "OFF (MUTED)", tag .. "the row shows the new value")
+      screen.index = indexOf("scrolling")
+      press("right")
+      eq(I.core.opt("scrolling"), "normal", tag .. "RIGHT steps forward")
+      press("left"); press("left")
+      eq(I.core.opt("scrolling"), "fast", tag .. "LEFT steps back and wraps")
+      screen.index = indexOf("rename")
+      press("a")
+      eq(I.core.on("rename"), true, tag .. "A flips a toggle")
+      screen.index = #screen.items
+      press("a"); press("a")   -- RESET DEFAULTS, then RESET
+      eq(I.core.opt("low_hp_beep"), "on", tag .. "RESET DEFAULTS restores every row")
+      eq(I.core.on("rename"), false, tag .. "toggles included")
+      press("b")
+      eq(gen == 3 and #Stack3._layers or #states, before, tag .. "B closes the page")
     end
 
     -- DECAP keeps the engine's cached font path (Gen 1 and 2)
@@ -764,8 +1320,8 @@ do
   out = SM.apply(items("POKEDEX", "OPTION", "POKEMON", "BAG", "MODS", "SAVE"))
   keys = {}
   for i, it in ipairs(out) do keys[i] = it.id end
-  eq(table.concat(keys, ","), "SAVE,BAG,POKEMON,MODS,OPTION",
-    "a row the layout never saw goes on the end, where the editor finds it")
+  eq(table.concat(keys, ","), "SAVE,BAG,OPTION,POKEMON,MODS",
+    "a row the layout never saw goes just above the row below it in the game's menu")
   out = SM.apply(items("POKEDEX", "POKEMON", "BAG", "MODS", "SAVE", "QUIT"))
   keys = {}
   for i, it in ipairs(out) do keys[i] = it.id end
@@ -899,6 +1455,38 @@ do
     "and the layout can move another mod's row")
   remove()
   SM.reset()
+end
+
+-- v1.5: one row, one editor entry.  The same row offered once with its id
+-- and once by label alone (or a v1.4 store holding both) is listed once,
+-- and rows the menu no longer shows are not listed at all.
+do
+  local function editorKeys()
+    local out = {}
+    for i, row in ipairs(SM._editorRows()) do out[i] = row.key end
+    return table.concat(out, ",")
+  end
+  SM.reset()
+  SM._setKnown({}, {})
+  SM.apply({ { id = "pokedex", label = "POKEDEX" }, { id = "bag", label = "BAG" },
+    { id = "save", label = "SAVE" } })
+  SM._setLayout({ "SAVE", "BAG", "POKEDEX" }, {})
+  -- the same menu, built without ids
+  local out = SM.apply({ { label = "POKEDEX" }, { label = "BAG" }, { label = "SAVE" } })
+  eq(#SM._editorRows(), 3, "a row seen by id and by label is listed once")
+  eq(editorKeys(), "SAVE,BAG,POKEDEX", "and in the player's order")
+  eq(out[1].label .. "," .. out[3].label, "SAVE,POKEDEX", "the label-only menu takes the layout too")
+  -- a v1.4 store that learned every row twice
+  SM._setKnown({ { "POKEDEX", "POKEDEX" }, { "BAG", "BAG" }, { "SAVE", "SAVE" },
+    { "pokedex_id", "POKEDEX" }, { "bag_id", "BAG" }, { "save_id", "SAVE" } },
+    { "POKEDEX", "BAG", "SAVE", "pokedex_id", "bag_id", "save_id" })
+  eq(#SM._editorRows(), 3, "a doubled v1.4 store collapses to one row each")
+  -- a row learned once (a removed mod's) is kept but not listed
+  SM._setKnown({ { "POKEDEX", "POKEDEX" }, { "GAMESHARK", "GAMESHARK" }, { "SAVE", "SAVE" } }, {})
+  SM.apply({ { id = "pokedex", label = "POKEDEX" }, { id = "save", label = "SAVE" } })
+  eq(editorKeys(), "POKEDEX,SAVE", "a row the START menu no longer shows is not listed")
+  SM.reset()
+  SM._setKnown({}, {})
 end
 
 -- the row key is stable whatever DECAPITALIZATION does to the label it draws
