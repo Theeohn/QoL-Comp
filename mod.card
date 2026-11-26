@@ -18,6 +18,7 @@ return {
       "EDIT START MENU: move, hide and show START menu rows, per generation (MODS can be moved, never hidden)",
       "CENTER CAMERA (Gen 1/2 only): puts the player on the true horizontal centre of the Game Boy screen",
       "CHOOSE PKMN: OFF / TRAINER / T+WILD -- the opponent comes out first, then you pick who answers",
+      "EXP SHARE: OFF / ON (GEN2) -- the next Pokemon in the party also gets half the EXP and EVs / ON (GEN6) -- the whole non-fainted party gets EXP (participants full, the rest 50%) and full EVs, level 100 included, and catches pay out",
       "DECAPITALIZATION: ALL-CAPS names and menu words become Title-case (Quick Attack, Item / Run, Hall of Fame), an ALL-CAPS sentence gets sentence case; abbreviations (TM, HM, PKMN, HP, PP...) and words with digits stay",
       "FAST POKECENTER: OFF / FAST (the nurse's first line, then straight into the heal, no question asked) / NOW (no text at all); the player turns around afterwards",
       "FIELD MOVES: any Pokemon that could learn a field move can use it; badges, context and the TM/HM-in-bag rule still apply; eight-row cap kept",

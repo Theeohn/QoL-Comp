@@ -21,6 +21,7 @@
 --                      opening this mod's own toggles page
 --   lib/nickskip.lua   RENAME's other half: no nickname question on arrival
 --   lib/pcrename.lua   RENAME in the PC's per-Pokemon menu
+--   lib/expshare.lua   EXP SHARE: OFF / ON (GEN2) / ON (GEN6)
 --   lib/common.lua     toggles whose seam is one hook on every generation
 --   lib/gen1.lua       Red / Blue / Yellow seams
 --   lib/gen2.lua       Gold / Silver / Crystal seams
@@ -77,9 +78,9 @@ V.game = nil
 -- ------- options: EDIT START MENU on top, then A-Z, every toggle OFF
 --
 -- Gen 3's manager cuts a row's value at eight characters.  Its value column
--- has room for about twelve, so the two LOW HP BEEP labels that are longer
--- are drawn whole by lib/gen3.lua (see LONG_VALUES there); every other
--- choice label is eight or fewer.
+-- has room for about twelve, so the labels that are longer -- LOW HP BEEP's
+-- two and EXP SHARE's two -- are drawn whole by lib/gen3.lua (see
+-- LONG_VALUES there); every other choice label is eight or fewer.
 
 local OPEN_HINT = (V.generation == 3) and "OPEN" or "A TO OPEN"
 
@@ -92,6 +93,8 @@ V.SCHEMA = {
   { key = "choose_pkmn", label = "CHOOSE PKMN", type = "choice", default = "off",
     choices = { { "OFF", "off" }, { "TRAINER", "trainer" }, { "T+WILD", "both" } } },
   { key = "decap", label = "DECAPITALIZATION", type = "toggle", default = false },
+  { key = "exp_share", label = "EXP SHARE", type = "choice", default = "off",
+    choices = { { "OFF", "off" }, { "ON (GEN2)", "gen2" }, { "ON (GEN6)", "gen6" } } },
   { key = "fast_pokecenter", label = "FAST POKECENTER", type = "choice", default = "off",
     choices = { { "OFF", "off" }, { "FAST", "fast" }, { "NOW", "now" } } },
   { key = "field_moves", label = "FIELD MOVES", type = "toggle", default = false },
@@ -137,6 +140,7 @@ V.scroll = V.require("scroll")
 V.optionsrow = V.require("optionsrow")
 V.nickskip = V.require("nickskip")
 V.pcrename = V.require("pcrename")
+V.expshare = V.require("expshare")
 
 local C = V.core
 
@@ -184,6 +188,7 @@ C.try("scroll.install", V.scroll.install, mod)
 C.try("startmenu.install", V.startmenu.install, mod)
 C.try("optionsrow.install", V.optionsrow.install, mod)
 C.try("nickskip.install", V.nickskip.install, mod)
+C.try("expshare.install", V.expshare.install, mod)
 
 local armName = (V.generation == 3 and "gen3") or (V.generation == 2 and "gen2") or "gen1"
 local okArm, arm = pcall(V.require, armName)
@@ -198,11 +203,11 @@ end
 
 -- ------- exports, for other mods and the headless suite
 
-mod.exports.version = "1.53"
+mod.exports.version = "1.6"
 mod.exports.generation = V.generation
 mod.exports.option = function(key) return C.opt(key) end
 mod.exports._internal = {
   core = C, decap = V.decap, common = V.common, startmenu = V.startmenu,
   ui = V.ui, scroll = V.scroll, arm = V.arm, optionsrow = V.optionsrow,
-  nickskip = V.nickskip, pcrename = V.pcrename, V = V,
+  nickskip = V.nickskip, pcrename = V.pcrename, expshare = V.expshare, V = V,
 }

@@ -1,6 +1,6 @@
 # QoL Comp
 
-A quality-of-life compilation for **Gen 1, Gen 2 and Gen 3**: fifteen
+A quality-of-life compilation for **Gen 1, Gen 2 and Gen 3**: sixteen
 toggles, a START menu editor and a few small always-on fixes, in one mod.
 Every toggle starts at the normal game, so installing it changes nothing
 until you turn something on.
@@ -9,7 +9,7 @@ until you turn something on.
   quicker Pokémon Center, TMs that aren't used up.
 - **More control:** rename from the party menu or PC, relearn moves, use field
   moves without teaching them, pick who leads a battle, rematch beaten
-  trainers.
+  trainers, share EXP with the whole team.
 - **Easier on the eyes:** normal-case text instead of ALL CAPS, a centred
   camera on the Game Boy games, full-screen menus on the GBA games.
 - **Your START menu, your way:** move or hide any row, including rows other
@@ -18,10 +18,10 @@ until you turn something on.
 ## Install
 
 **Easiest:** in the game's launcher, use **Import mod .zip** (or just drag
-`QoL-Comp-v1.53.zip` onto the game window). Works the same on Windows, Mac and
+`QoL-Comp-v1.6.zip` onto the game window). Works the same on Windows, Mac and
 Linux.
 
-**Manually:** unzip `QoL-Comp-v1.53.zip` into a `qol_comp` folder inside the
+**Manually:** unzip `QoL-Comp-v1.6.zip` into a `qol_comp` folder inside the
 game's `mods` folder:
 
 | OS | Mods folder |
@@ -57,6 +57,7 @@ is kept).
 | `CENTER CAMERA` | OFF / ON | *Gen 1/2 only.* Puts the player on the true centre of the screen. The Game Boy screen is an even 10 tiles wide, so the original sits the player half a tile left of centre. |
 | `CHOOSE PKMN` | OFF / TRAINER / T+WILD | The opponent comes out first, then you choose which Pokémon to send out. TRAINER asks in trainer battles; T+WILD in wild battles too. B keeps your normal lead. |
 | `DECAPITALIZATION` | OFF / ON | Changes ALL-CAPS text to normal case in dialogue, battles and menus. |
+| `EXP SHARE` | OFF / ON (GEN2) / ON (GEN6) | ON (GEN2): the next Pokémon in the party also gets half the EXP and EVs. ON (GEN6): the whole team shares the EXP, and catching pays out too. |
 | `FAST POKECENTER` | OFF / FAST / NOW | FAST: the nurse's first line, then straight to healing. NOW: heals with no text at all. Either way you're turned away from the counter afterwards. |
 | `FIELD MOVES` | OFF / ON | A Pokémon can use a field move it doesn't know, if you have the TM/HM, it could learn the move, and the move would work right where you are. |
 | `FULL SCREEN MENUS` | OFF / ON | *Gen 3 only.* Full-screen menus (bag, party, summary, Pokédex, PC) are scaled up to the window's height. |
@@ -169,6 +170,28 @@ frames, then every 11.
 
 **Gamble Odds.** Covers the slot machines on every game and Gold/Silver/
 Crystal's Card Flip. Emerald's roulette isn't changed.
+
+**EXP Share.** Works on all eleven games, through each game's own EXP
+routine, so level-ups, new moves and evolutions happen as normal. "EVs" means
+stat experience on Gen 1/2.
+
+- **ON (GEN2):** everyone who fought gets their normal EXP. Then, for each
+  of them, the next Pokémon down the party list that didn't fight also gets
+  half that EXP and half those EVs. The search wraps to the top of the list
+  and skips fainted Pokémon and eggs. Each Pokémon is paid this way at most
+  once per KO.
+- **ON (GEN6):** when a foe faints, every Pokémon in the party that isn't
+  fainted or an egg gets EXP. The ones that fought get the full amount each,
+  not split between them. The rest get 50%. All of them get the full EVs,
+  including level 100 Pokémon. Catching a wild Pokémon pays out the same way.
+  A held EXP. SHARE (Gen 2/3) has no effect in this mode. The Pokémon that
+  fought show their "gained EXP" message; the rest are paid quietly, but
+  their level-ups still show.
+- On Gen 3, EVs are whole numbers, so ON (GEN2)'s half rounds down. A foe
+  worth 1 EV gives the next Pokémon none.
+- Mods that split Gen 1's SPECIAL into Special Attack and Special Defense
+  work with both modes. QoL Comp pays through the game's own routine, which
+  pays every stat the game has.
 
 **Fast Pokecenter.** The healing animation still plays in both modes.
 

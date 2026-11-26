@@ -1,7 +1,7 @@
 {
   "id": "qol_comp",
   "name": "QoL Comp",
-  "version": "1.53",
+  "version": "1.6",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -14,6 +14,6 @@
   "conflicts": [],
   "permissions": ["engine_internals"],
   "affects_link": false,
-  "description": "Quality-of-life toggles for all eleven games, from running with B and hold-to-scroll menus to renaming, relearning moves and trainer rematches, each off until you turn it on. Also adds a START menu editor and a few small always-on fixes, all set from the game's own OPTIONS screen or the Mod Manager.",
+  "description": "Quality-of-life toggles for all eleven games, from running with B and hold-to-scroll menus to renaming, relearning moves, an EXP Share and trainer rematches, each off until you turn it on. Also adds a START menu editor and a few small always-on fixes, all set from the game's own OPTIONS screen or the Mod Manager.",
   "github": "Theeohn/QoL-Comp"
 }

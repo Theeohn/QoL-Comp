@@ -3,6 +3,22 @@
 Format: [keep a changelog](https://keepachangelog.com/en/1.1.0/).
 Version headings match `manifest.json`'s `version`.
 
+## [1.6] - 2026-11-26
+
+### Added
+
+- EXP SHARE: OFF / ON (GEN2) / ON (GEN6), on all eleven games.
+  - ON (GEN2): after the normal award, the next Pokémon in the party (not
+    fainted, not an egg, didn't fight) gets half the EXP and half the EVs or
+    stat exp of each Pokémon that fought.
+  - ON (GEN6): every non-fainted, non-egg Pokémon in the party gets EXP when
+    a foe faints or is caught. Pokémon that fought get the full amount each;
+    the rest get 50%. Every one of them gets the full EVs, level 100 included.
+    A held EXP. SHARE has no effect in this mode.
+  - Both modes pay through each game's own EXP routine, so level-ups, moves,
+    evolutions, the traded and Lucky Egg boosts and Pokérus work as normal.
+    That includes mods that split Gen 1's SPECIAL stat.
+
 ## [1.53] - 2026-11-25
 
 ### Fixed
