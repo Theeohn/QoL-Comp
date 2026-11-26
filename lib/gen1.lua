@@ -155,7 +155,11 @@ end
 -- Name Rater's does; END with nothing typed, or the same name again, keeps
 -- the old name.  The new name is written onto the party member and the
 -- player is told which happened.
-function A.rename(game, mon)
+-- opts (the PC's RENAME row): say(text) reports in the caller's own message
+-- line instead of A.say, and after() runs once the name is decided.
+function A.rename(game, mon, opts)
+  opts = opts or {}
+  local say = opts.say or function(text) A.say(game, text) end
   local Screens = require("src.ui.Screens")
   if not (game and game.stack) then error("there is no screen to open the naming screen on", 0) end
   local before = monName(game, mon)
@@ -165,11 +169,13 @@ function A.rename(game, mon)
     mon = mon,
     onDone = function(name)
       if type(name) ~= "string" or name:match("^%s*$") or name == before then
-        A.say(game, before .. " kept\nits name.")
+        say(before .. " kept\nits name.")
+        if opts.after then opts.after(false) end
         return
       end
       mon.nickname = name
-      A.say(game, before .. " is now\nnamed " .. name .. "!")
+      say(before .. " is now\nnamed " .. name .. "!")
+      if opts.after then opts.after(true) end
     end,
   })
 end

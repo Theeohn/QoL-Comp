@@ -318,7 +318,11 @@ end
 -- Name Rater's is.  OK with nothing typed, or the same name again, keeps the
 -- old name; a new one is written onto the party member and the player is
 -- told which happened.
-function A.rename(game, mon)
+-- opts (the PC's RENAME row): say(text) reports in the caller's own message
+-- line instead of A.say, and after() runs once the name is decided.
+function A.rename(game, mon, opts)
+  opts = opts or {}
+  local say = opts.say or function(text) A.say(game, text) end
   local Naming = req("src.ui.game3.naming")
   if not (Naming and Naming.open) then error("the naming screen was not found", 0) end
   local species = speciesOf(mon)
@@ -337,11 +341,13 @@ function A.rename(game, mon)
     game = game,
     onDone = function(name)
       if type(name) ~= "string" or name:match("^%s*$") or name == before then
-        A.say(game, before .. " kept its name.")
+        say(before .. " kept its name.")
+        if opts.after then opts.after(false) end
         return
       end
       mon.nickname = name
-      A.say(game, before .. " is now named\n" .. name .. "!")
+      say(before .. " is now named\n" .. name .. "!")
+      if opts.after then opts.after(true) end
     end,
   })
 end
@@ -1029,11 +1035,16 @@ function G.install(mod)
   -- Player.canDash is the one place the GBA games decide whether holding B
   -- runs (pret field_player_avatar; player.lua Player.update asks it each
   -- step).  Vanilla it needs the Running Shoes flag, then refuses
-  -- underwater and on ground where running is not allowed.  With B TO RUN it
-  -- answers by those same rules MINUS the flag; everything after -- the run
-  -- step, its speed, its animation -- is the game's own, so the sprite runs
-  -- exactly as it does with the real shoes.  Once you have the shoes the
-  -- vanilla answer is already yes and this adds nothing.
+  -- underwater and wherever running is not allowed: indoor maps (the map
+  -- header's allowRunning) and Player.runningDisallowed's tiles -- long
+  -- grass, hot springs, Pacifidlog's logs, Fortree's bridges, MB_NO_RUNNING.
+  -- With B TO RUN it answers yes without the flag AND in all of those
+  -- places, with or without the real shoes: you can run anywhere you can
+  -- walk.  Only underwater, the bike and surfing still say no -- the game
+  -- has no run there.  Everything after -- the run step, its speed, its
+  -- animation -- is the game's own, so the sprite runs exactly as it does
+  -- with the real shoes.  (Player.runningDisallowed itself is untouched: the
+  -- Acro Bike's tile rules ask the bike's own copy of it.)
   --
   -- (0.1.2 rebuilt the step itself after the game had started it as a
   -- walk, which made Emerald's sprite flicker between the run and a fast
@@ -1041,15 +1052,10 @@ function G.install(mod)
   local Player = req("src.core.game3.player")
   if Player and type(Player.canDash) == "function" then
     C.patch(Player, "canDash", function(orig, ...)
-      if orig(...) then return true end
-      if C.opt("running_shoes") ~= "b" then return false end
+      if C.opt("running_shoes") ~= "b" then return orig(...) end
       -- the field must be up, as vanilla requires
       if not store() then return false end
       if Player.underwater or Player.biking or Player.surfing then return false end
-      if Player.runningDisallowed then
-        local ok, no = pcall(Player.runningDisallowed, Player.cellX, Player.cellY)
-        if not ok or no then return false end
-      end
       return true
     end)
   else

@@ -150,7 +150,11 @@ end
 --   * renameMon only hands the typed name back -- the Name Rater script is
 --     what writes it (src/script/gen2/Specials.lua H.NameRater) -- so this
 --     writes it onto the party member, then says so.
-function A.rename(game, mon)
+-- opts (the PC's RENAME row): say(text) reports in the caller's own message
+-- line instead of A.say, and after() runs once the name is decided.
+function A.rename(game, mon, opts)
+  opts = opts or {}
+  local say = opts.say or function(text) A.say(game, text) end
   local world = game and game.world
   if not (world and type(world.renameMon) == "function") then
     error("the naming screen is not available here", 0)
@@ -158,11 +162,13 @@ function A.rename(game, mon)
   local before = monName(game, mon)
   local opened = world:renameMon(mon, function(name)
     if type(name) ~= "string" or name:match("^%s*$") or name == before then
-      A.say(game, before .. " kept\nits name.")
+      say(before .. " kept\nits name.")
+        if opts.after then opts.after(false) end
       return
     end
     mon.nickname = name
-    A.say(game, before .. " is now\nnamed " .. name .. "!")
+    say(before .. " is now\nnamed " .. name .. "!")
+      if opts.after then opts.after(true) end
   end, { blank = true })
   if opened == false then error("the naming screen did not open", 0) end
 end

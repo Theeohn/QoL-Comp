@@ -16,6 +16,9 @@
 --   onMove(i, d)   optional; when screen.moving is set, up/down call this
 --                  instead of moving the cursor (the start-menu MOVE mode)
 --   hint           optional bottom-line text
+--
+-- A row may also carry onStep(screen, i, dir): LEFT / RIGHT call it with
+-- dir -1 / 1 (the toggles page uses it to step a value either way).
 
 local V = ...
 local C = V.core
@@ -69,6 +72,12 @@ function Screen:handle(pressed)
   if pressed("up") then self.index = clampIndex(self.index - 1, n)
   elseif pressed("down") then self.index = clampIndex(self.index + 1, n)
   elseif pressed("b") then self:close()
+  elseif pressed("left") or pressed("right") then
+    local row = self.items[self.index]
+    if row and row.onStep then
+      C.try("ui.step", row.onStep, self, self.index, pressed("left") and -1 or 1)
+      if self.open then self:refresh() end
+    end
   elseif pressed("a") then
     local row = self.items[self.index]
     if row and row.onSelect then C.try("ui.select", row.onSelect, self, self.index) end
