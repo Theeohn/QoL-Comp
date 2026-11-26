@@ -2,8 +2,9 @@
 -- Gen1Recomp Deluxe project -- Red, Blue, Yellow, Gold, Silver, Crystal,
 -- Ruby, Sapphire, Emerald, FireRed and LeafGreen.
 --
--- Every option lives in this mod's own MOD OPTIONS list (Mod Manager -> QoL
--- Comp -> OPTIONS); nothing is added to the START menu.  EDIT START MENU is
+-- Every option lives in this mod's own options list, reached from the Mod
+-- Manager (QoL Comp -> OPTIONS) or straight from the game's own OPTIONS
+-- screen (QOL COMP); nothing is added to the START menu.  EDIT START MENU is
 -- pinned to the top of that list, the toggles follow in alphabetical order,
 -- and every toggle ships OFF, so installing the mod changes nothing until a
 -- toggle is turned on.  The always-on changes (shop bag count, SELECT party
@@ -16,7 +17,10 @@
 --   lib/scroll.lua     SCROLLING (hold the d-pad in menus)
 --   lib/ui.lua         the list screen the mod's own menus use
 --   lib/startmenu.lua  EDIT START MENU
---   lib/optionsrow.lua a QOL COMP row in each game's own OPTIONS screen
+--   lib/optionsrow.lua a QOL COMP row in each game's own OPTIONS screen,
+--                      opening this mod's own toggles page
+--   lib/nickskip.lua   RENAME's other half: no nickname question on arrival
+--   lib/pcrename.lua   RENAME in the PC's per-Pokemon menu
 --   lib/common.lua     toggles whose seam is one hook on every generation
 --   lib/gen1.lua       Red / Blue / Yellow seams
 --   lib/gen2.lua       Gold / Silver / Crystal seams
@@ -131,6 +135,8 @@ V.common = V.require("common")
 V.startmenu = V.require("startmenu")
 V.scroll = V.require("scroll")
 V.optionsrow = V.require("optionsrow")
+V.nickskip = V.require("nickskip")
+V.pcrename = V.require("pcrename")
 
 local C = V.core
 
@@ -177,6 +183,7 @@ end, 10)
 C.try("scroll.install", V.scroll.install, mod)
 C.try("startmenu.install", V.startmenu.install, mod)
 C.try("optionsrow.install", V.optionsrow.install, mod)
+C.try("nickskip.install", V.nickskip.install, mod)
 
 local armName = (V.generation == 3 and "gen3") or (V.generation == 2 and "gen2") or "gen1"
 local okArm, arm = pcall(V.require, armName)
@@ -184,16 +191,18 @@ if okArm and arm then
   V.arm = arm
   local ok, err = pcall(arm.install, mod)
   if not ok then C.warnOnce(armName .. ".install", err) end
+  C.try("pcrename.install", V.pcrename.install, arm.A or arm)
 else
   C.warnOnce(armName .. ".load", arm)
 end
 
 -- ------- exports, for other mods and the headless suite
 
-mod.exports.version = "1.4"
+mod.exports.version = "1.53"
 mod.exports.generation = V.generation
 mod.exports.option = function(key) return C.opt(key) end
 mod.exports._internal = {
   core = C, decap = V.decap, common = V.common, startmenu = V.startmenu,
-  ui = V.ui, scroll = V.scroll, arm = V.arm, optionsrow = V.optionsrow, V = V,
+  ui = V.ui, scroll = V.scroll, arm = V.arm, optionsrow = V.optionsrow,
+  nickskip = V.nickskip, pcrename = V.pcrename, V = V,
 }

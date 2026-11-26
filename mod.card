@@ -8,7 +8,7 @@ return {
   differences = {
     changed = {
       "every toggle lives in this mod's MOD OPTIONS list (nothing is added to the START menu): EDIT START MENU on top, then the toggles A-Z, each starting at the normal game",
-      "a QOL COMP row in every game's own OPTIONS screen, straight to those options",
+      "a QOL COMP row in every game's own OPTIONS screen that opens QoL Comp's own toggles page (A or LEFT/RIGHT to change, B back to OPTIONS)",
       "SHOP BAG COUNT (always on): the buy list shows how many of the highlighted item you already carry, 0 when none",
       "SELECT QUICK SWITCH (always on): SELECT on a party member, then A or SELECT on another swaps them; B cancels",
       "BIGGER BAG (always on): 999 to a stack on every game; on Gen 1/2 the item pocket also holds 255 rows",
@@ -28,8 +28,8 @@ return {
       "LOW HP BEEP: ON (BEEPS) / OFF (MUTED)",
       "RELEARN MOVES: a RELEARN row in the party submenu",
       "REMATCH: OFF / ON (NORMAL) / ON (TRAINING) -- rematch any trainer you've beaten; TRAINING scales them to your progress",
-      "RENAME: a RENAME row in the party submenu (Name Rater rules: empty keyboard, an empty answer keeps the name, and the game says which happened)",
-      "RUNNING SHOES: OFF / B TO RUN (Gen 3: the game's own Running Shoes, unlocked early)",
+      "RENAME: a RENAME row in the party submenu and in the PC's per-Pokemon menu (Name Rater rules: empty keyboard, an empty answer keeps the name, and the game says which happened); while on, no nickname question when a Pokemon is caught, given, won in the Bug-Catching Contest or hatched",
+      "RUNNING SHOES: OFF / B TO RUN (Gen 3: the game's own Running Shoes, unlocked early, and usable anywhere you can walk, indoors included)",
       "SCROLLING: OFF / NORMAL / FAST -- hold the d-pad in menus (FAST holds 14 frames then steps every 8; NORMAL is 35% slower)",
     },
     known = {

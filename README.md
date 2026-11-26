@@ -7,7 +7,7 @@ until you turn something on.
 
 - **Faster everyday play:** hold the d-pad to scroll menus, run with B, a
   quicker Pokémon Center, TMs that aren't used up.
-- **More control:** rename and relearn moves from the party menu, use field
+- **More control:** rename from the party menu or PC, relearn moves, use field
   moves without teaching them, pick who leads a battle, rematch beaten
   trainers.
 - **Easier on the eyes:** normal-case text instead of ALL CAPS, a centred
@@ -18,10 +18,10 @@ until you turn something on.
 ## Install
 
 **Easiest:** in the game's launcher, use **Import mod .zip** (or just drag
-`QoL-Comp-v1.4.zip` onto the game window). Works the same on Windows, Mac and
+`QoL-Comp-v1.53.zip` onto the game window). Works the same on Windows, Mac and
 Linux.
 
-**Manually:** unzip `QoL-Comp-v1.4.zip` into a `qol_comp` folder inside the
+**Manually:** unzip `QoL-Comp-v1.53.zip` into a `qol_comp` folder inside the
 game's `mods` folder:
 
 | OS | Mods folder |
@@ -42,12 +42,14 @@ Ruby/Sapphire/Emerald/FireRed/LeafGreen.
 
 The options are in two places, and both show the same settings:
 
+- the game's own **OPTIONS** screen → **QOL COMP**, at the bottom of the list.
+  This opens QoL Comp's toggles directly; **B** takes you back to OPTIONS.
 - **Mod Manager** (`F10`) → **QoL Comp** → **OPTIONS**
-- the game's own **OPTIONS** screen → **QOL COMP**, at the bottom of the list
 
 **EDIT START MENU** is at the top, followed by the toggles in alphabetical
-order. **RESET DEFAULTS** at the bottom puts every toggle back to the normal
-game (your START menu layout is kept).
+order. Press **A** or **LEFT/RIGHT** to change a value. **RESET DEFAULTS** at
+the bottom puts every toggle back to the normal game (your START menu layout
+is kept).
 
 | Option | Values | What it does |
 | --- | --- | --- |
@@ -64,7 +66,7 @@ game (your START menu layout is kept).
 | `LOW HP BEEP` | ON (BEEPS) / OFF (MUTED) | OFF (MUTED) silences the low-HP alarm. ON (BEEPS) is the normal game. |
 | `RELEARN MOVES` | OFF / ON | Adds a RELEARN row to the party menu. |
 | `REMATCH` | OFF / ON (NORMAL) / ON (TRAINING) | Rematch any trainer you've beaten. TRAINING scales their team to your progress. |
-| `RENAME` | OFF / ON | Adds a RENAME row to the party menu. |
+| `RENAME` | OFF / ON | Adds a RENAME row to the party menu and the PC, and stops the "give a nickname?" question when you catch, receive or hatch a Pokémon. |
 | `RUNNING SHOES` | OFF / B TO RUN | Hold B to run. |
 | `SCROLLING` | OFF / NORMAL / FAST | Hold the d-pad in a menu and the cursor keeps moving. |
 
@@ -73,16 +75,24 @@ game (your START menu layout is kept).
 Press A on an entry to get **MOVE** and **HIDE** (or **SHOW** for a hidden
 one). MOVE picks the entry up; UP/DOWN carries it and A or B puts it down.
 
+- The editor's list is your START menu, top to bottom. Every row stays
+  exactly where you put it.
 - Each generation keeps its own layout.
-- Rows added by other mods (like GAMESHARK) can be moved and hidden too. A
-  row from a mod you install later goes to the end of the menu.
+- Rows added by other mods (like GAMESHARK) can be moved and hidden too.
+- A row that appears later (POKéDEX or POKéGEAR once you get them, a mod you
+  install) goes just above the row that comes after it in the game's own
+  menu, or at the bottom if nothing does. After that it stays where you put
+  it.
 - **MODS** can be moved but never hidden, so the Mod Manager is always
-  reachable. QUIT stays last.
+  reachable.
 - **RESET LAYOUT**, the last row, restores the game's own order and shows
   everything again.
+- Changes show straight away, including in a START menu that's still open
+  behind the editor.
 - The editor lists what the START menu showed the last time it was opened, so
   open the START menu once before your first edit, and again after installing
-  a mod that adds a row.
+  a mod that adds a row. A row that's gone (a mod you've removed) drops off
+  the list but keeps its place in case it comes back.
 
 ### More on each option
 
@@ -117,6 +127,16 @@ spot, SOFTBOILED / MILK DRINK with HP to spare.
 Rater. Confirming with nothing typed (or the same name) keeps the old name, and
 the game tells you which happened. Not shown in battle or for eggs.
 
+In the PC, RENAME is on the menu you get by picking a Pokémon, just above
+CANCEL: WITHDRAW and DEPOSIT on Gen 1, the box lists on Gen 2, and the
+storage boxes and party on Gen 3. Gen 3's MOVE ITEMS mode doesn't get it.
+
+While RENAME is on, the game no longer asks for a nickname when a Pokémon
+joins you: catching one, receiving a gift, the Bug-Catching Contest, or an egg
+hatching. It keeps its species name, as if you'd answered NO, and you can name
+it from the party menu or the PC whenever you like. Pokémon the game names itself (a
+trade, Shuckie) are unchanged.
+
 **Relearn Moves.** Lists every level-up move the Pokémon could know at its
 level but doesn't right now, read from the game's current data (so learnset
 mods are respected). Pick one and the game's normal "forget a move?" screen
@@ -138,8 +158,11 @@ rematch?"*. NO gives their usual line; YES starts the battle.
 - Gen 1/2: hold B while walking to move about 1.78× faster, with a quicker
   walk animation to match. Not on a bike, while surfing, or on slopes.
 - Gen 3: the game's own Running Shoes, unlocked from the start, with the
-  game's own speed and animation, everywhere running is normally allowed.
-  Once you get the real shoes, nothing changes.
+  game's own speed and animation. You can run anywhere you can walk:
+  indoors, in long grass, in hot springs, and on Pacifidlog's logs and
+  Fortree's bridges. This holds whether or not you have the real shoes.
+  Not on a bike, while surfing, or underwater.
+- Gen 1/2 already let you run anywhere you can walk.
 
 **Scrolling.** FAST waits 14 frames, then moves every 8. NORMAL is gentler: 19
 frames, then every 11.
@@ -176,7 +199,9 @@ and the field itself are drawn as normal. If you also use
   it relies on is missing, rather than crashing.
 - If anything looks wrong, turn that option off. The normal game returns
   straight away.
-- The QoL toggles can be overridden by other UI mods without issue, like bag count in a shop being on but another    mod might change how the shop works entirely.  
+- Other UI mods can override a QoL toggle without causing problems. For
+  example, SHOP BAG COUNT can be on while another mod changes how the shop
+  works entirely.
 
 ## Credits
 
