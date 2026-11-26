@@ -800,7 +800,7 @@ end
 -- its value column (x 146 to the frame at 224) has room for about twelve.
 -- LOW HP BEEP's "ON (BEEPS)" and "OFF (MUTED)" are drawn whole on this
 -- mod's own options page; nothing else is touched.
-local LONG_VALUES = { "ON (BEEPS)", "OFF (MUTED)" }
+local LONG_VALUES = { "ON (BEEPS)", "OFF (MUTED)", "ON (GEN2)", "ON (GEN6)" }
 local VALUE_X = 16 + 0x82
 
 function G.installLongValues()
